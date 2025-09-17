@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FB Chat - Chat Room</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 480px; margin: 20px auto; }
+  #online-info { margin-bottom: 10px; }
+  #chat-messages {
+    border: 1px solid #ccc;
+    height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+  }
+  .message {
+    margin-bottom: 8px;
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: 15px;
+    clear: both;
+    word-wrap: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+  .sent {
+    background-color: #cce5ff;
+    float: right;
+    text-align: right;
+  }
+  .received {
+    background-color: #e2e3e5;
+    float: left;
+    text-align: left;
+  }
+  .timestamp {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 4px;
+  }
+  .sender-name {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 4px;
+  }
+  #presence-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: red;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  input, button {
+    font-size: 1rem;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  input[type="text"] { width: 80%; }
+  button { width: 18%; background: #1a73e8; color: white; border: none; cursor: pointer; }
+  button:hover { background: #155dbb; }
+</style>
+</head>
+<body>
+
+<h1>FB Chat - Chat Room</h1>
+<div id="online-info">
+  Logged in as <span id="user-email"></span> (<span id="username"></span>)
+  <button id="logout-btn" style="float: right;">Logout</button>
+</div>
+
+<label for="chat-to">Chat with (email): 
+  <span id="presence-dot" title="Offline"></span>
+</label>
+<input type="text" id="chat-to" placeholder="Friend's email" autocomplete="off" />
+
+<div id="chat-messages"></div>
+
+<form id="chat-form">
+  <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off" required />
+  <button>Send</button>
+</form>
+
+<script>
+(async () => {
+  const userEmailSpan = document.getElementById('user-email');
+  const usernameSpan = document.getElementById('username');
+  const logoutBtn = document.getElementById('logout-btn');
+  const chatToInput = document.getElementById('chat-to');
+  const chatMessagesDiv = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const presenceDot = document.getElementById('presence-dot');
+
+  // Fetch logged-in user info
+  const res = await fetch('/api/session-user');
+  if (!res.ok) { window.location.href = '/'; return; }
+  const user = await res.json();
+  userEmailSpan.textContent = user.email;
+  usernameSpan.textContent = user.username;
+
+  // Logout clears localStorage and logs out
+  logoutBtn.onclick = async () => {
+    localStorage.clear();
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/';
+  };
+
+  // localStorage key per conversation
+  function getStorageKey(friendEmail) {
+    return `chat_${user.email}_${friendEmail}`;
+  }
+
+  // Save message to localStorage history (per conversation)
+  function saveMessage(friendEmail, message) {
+    const key = getStorageKey(friendEmail);
+    let msgs = JSON.parse(localStorage.getItem(key)) || [];
+    msgs.push(message);
+    localStorage.setItem(key, JSON.stringify(msgs));
+  }
+
+  // Load messages from localStorage per conversation
+  function loadMessages(friendEmail) {
+    const key = getStorageKey(friendEmail);
+    return JSON.parse(localStorage.getItem(key)) || [];
+  }
+
+  // Format timestamp nicely
+  function formatTimestamp(ts) {
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Render a message bubble
+  function addMessage(msgObj) {
+    const { from, text, timestamp } = msgObj;
+    const isMe = from === user.email;
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message', isMe ? 'sent' : 'received');
+
+    const senderSpan = document.createElement('span');
+    senderSpan.className = 'sender-name';
+    senderSpan.textContent = isMe ? 'Me' : from;
+    msgDiv.appendChild(senderSpan);
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = text;
+    msgDiv.appendChild(textSpan);
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'timestamp';
+    timeSpan.textContent = formatTimestamp(timestamp);
+    msgDiv.appendChild(timeSpan);
+
+    chatMessagesDiv.appendChild(msgDiv);
+    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+  }
+
+  // Clears and renders all messages for a friend
+  function renderMessages(messages) {
+    chatMessagesDiv.textContent = '';
+    for (const msg of messages) {
+      addMessage(msg);
+    }
+  }
+
+  // Set current chat friend and load messages
+  function setChatFriend(friendEmail) {
+    localStorage.setItem('currentChatFriend', friendEmail);
+    renderMessages(loadMessages(friendEmail));
+    updatePresenceDot(friendEmail);
+  }
+
+  // Online users tracking
+  let lastOnlineUsers = [];
+
+  // Update presence dot color and tooltip
+  function updatePresenceDot(friendEmail) {
+    if (lastOnlineUsers.includes(friendEmail)) {
+      presenceDot.style.backgroundColor = 'green';
+      presenceDot.title = 'Online';
+    } else {
+      presenceDot.style.backgroundColor = 'red';
+      presenceDot.title = 'Offline';
+    }
+  }
+
+  // On page load, restore last friend chat
+  const savedFriend = localStorage.getItem('currentChatFriend');
+  if (savedFriend) {
+    chatToInput.value = savedFriend;
+    renderMessages(loadMessages(savedFriend));
+  }
+
+  // Update chat friend and messages when input changes
+  chatToInput.addEventListener('input', () => {
+    const friendEmail = chatToInput.value.trim();
+    if (friendEmail) {
+      setChatFriend(friendEmail);
+    } else {
+      presenceDot.style.backgroundColor = 'red';
+      presenceDot.title = 'No friend selected';
+      chatMessagesDiv.textContent = '';
+    }
+  });
+
+  const ws = new WebSocket(`ws://${window.location.host}`);
+
+  ws.addEventListener('open', () => {
+    ws.send(JSON.stringify({ type: 'login', email: user.email }));
+  });
+
+  ws.addEventListener('message', event => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === 'message-history') {
+      // Replace localStorage and UI with all messages on login
+      localStorage.clear();
+      data.messages.forEach(msg => {
+        let other = (msg.from === user.email) ? msg.to : msg.from;
+        saveMessage(other, msg);
+      });
+
+      // Determine current chat friend from input or restore last friend
+      const friendEmail = chatToInput.value.trim() || localStorage.getItem('currentChatFriend');
+      if (friendEmail) {
+        setChatFriend(friendEmail);
+      }
+    }
+
+    if (data.type === 'private-message') {
+      if (data.from === user.email) return; // filter own message sent echo
+      const friendEmail = chatToInput.value.trim();
+      if (
+        (data.from === friendEmail && data.to === user.email) ||
+        (data.from === user.email && data.to === friendEmail)
+      ) {
+        saveMessage(friendEmail, data);
+        addMessage(data);
+      }
+    }
+
+    if (data.type === 'online-users') {
+      lastOnlineUsers = data.onlineUsers;
+      updatePresenceDot(chatToInput.value.trim());
+    }
+
+    if (data.type === 'error') {
+      addMessage({ from: 'System', text: data.message, timestamp: Date.now() });
+    }
+  });
+
+  chatForm.onsubmit = e => {
+    e.preventDefault();
+    const to = chatToInput.value.trim();
+    const text = chatInput.value.trim();
+    if (!to || !text) return;
+
+    const msgObj = { from: user.email, to, text, timestamp: Date.now() };
+    saveMessage(to, msgObj);
+    addMessage(msgObj);
+
+    ws.send(JSON.stringify({ type: 'private-message', to, text }));
+    chatInput.value = '';
+
+    setChatFriend(to);
+  };
+})();
+</script>
+
+</body>
+</html>

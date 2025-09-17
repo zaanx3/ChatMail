@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FB Chat - Signup & Login</title>
+<style>
+body { font-family: Arial, sans-serif; max-width: 480px; margin: 20px auto; }
+input, button { display: block; width: 100%; margin: 6px 0; padding: 10px; }
+button { background: #1a73e8; color: white; border: none; cursor: pointer; }
+button:hover { background: #155dbb; }
+#message-box { margin-top: 10px; font-weight: bold; }
+section { border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
+a { cursor: pointer; color: #1a73e8; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<h1>FB Chat App</h1>
+
+<section id="signup-section">
+  <h2>Sign Up</h2>
+  <form id="signup-form">
+    <input type="email" id="signup-email" placeholder="Email" required />
+    <input type="text" id="signup-username" placeholder="Username" required />
+    <input type="tel" id="signup-phone" placeholder="Phone number" required />
+    <input type="password" id="signup-password" placeholder="Password" required />
+    <input type="password" id="signup-confirm" placeholder="Confirm password" required />
+    <button>Sign Up</button>
+  </form>
+  <p>Already have an account? <a onclick="toggleSections('login')">Log in here</a></p>
+</section>
+
+<section id="verify-section" style="display:none">
+  <h2>Verify Email</h2>
+  <form id="verify-form">
+    <input type="email" id="verify-email" placeholder="Email" required />
+    <input type="text" id="verify-code" placeholder="Verification code" required />
+    <button>Verify</button>
+  </form>
+</section>
+
+<section id="login-section" style="display:none">
+  <h2>Login</h2>
+  <form id="login-form">
+    <input type="email" id="login-email" placeholder="Email" required />
+    <input type="password" id="login-password" placeholder="Password" required />
+    <button>Login</button>
+  </form>
+  <p>Don't have an account? <a onclick="toggleSections('signup')">Sign up here</a></p>
+</section>
+
+<div id="message-box"></div>
+
+<script>
+const signupSection = document.getElementById('signup-section');
+const verifySection = document.getElementById('verify-section');
+const loginSection = document.getElementById('login-section');
+const messageBox = document.getElementById('message-box');
+
+function showMessage(msg, isError = false) {
+  messageBox.textContent = msg;
+  messageBox.style.color = isError ? 'red' : 'green';
+}
+
+function toggleSections(section) {
+  signupSection.style.display = section === 'signup' ? '' : 'none';
+  verifySection.style.display = section === 'verify' ? '' : 'none';
+  loginSection.style.display = section === 'login' ? '' : 'none';
+}
+
+document.getElementById('signup-form').onsubmit = async (e) => {
+  e.preventDefault();
+  showMessage('');
+  const email = document.getElementById('signup-email').value.trim();
+  const username = document.getElementById('signup-username').value.trim();
+  const phone = document.getElementById('signup-phone').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const confirm = document.getElementById('signup-confirm').value;
+
+  try {
+    const res = await fetch('/api/signup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, username, phone, password, confirm })
+    });
+    const data = await res.json();
+    if (data.error) {
+      showMessage(data.error, true);
+    } else {
+      showMessage(data.message);
+      toggleSections('verify');
+      document.getElementById('verify-email').value = email;
+    }
+  } catch {
+    showMessage('Network error', true);
+  }
+};
+
+document.getElementById('verify-form').onsubmit = async (e) => {
+  e.preventDefault();
+  showMessage('');
+  const email = document.getElementById('verify-email').value.trim();
+  const code = document.getElementById('verify-code').value.trim();
+
+  try {
+    const res = await fetch('/api/verify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, code })
+    });
+    const data = await res.json();
+    if (data.error) {
+      showMessage(data.error, true);
+    } else {
+      showMessage(data.message);
+      toggleSections('login');
+    }
+  } catch {
+    showMessage('Network error', true);
+  }
+};
+
+document.getElementById('login-form').onsubmit = async (e) => {
+  e.preventDefault();
+  showMessage('');
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (data.error) {
+      showMessage(data.error, true);
+    } else {
+      showMessage(data.message);
+      setTimeout(() => { window.location.href = '/chat.html'; }, 1000);
+    }
+  } catch {
+    showMessage('Network error', true);
+  }
+};
+
+toggleSections('signup');
+</script>
+
+</body>
+</html>

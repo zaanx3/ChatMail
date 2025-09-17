@@ -1,0 +1,17 @@
+{
+  "name": "fb-chat-app",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.2.2",
+    "express": "^4.21.2",
+    "express-session": "^1.18.2",
+    "nodemailer": "^6.10.1",
+    "ws": "^8.18.3"
+  }
+}

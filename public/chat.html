@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FB Chat - Cool Chat Room</title>
+<link rel="icon" href="/Inipagi-Business-Economic-Chat.512.png" type="image/png" />
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+  body {
+    font-family: 'Montserrat', sans-serif;
+    margin: 0; padding: 0; background: #121212; color: #f1f1f1;
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    background: #1f1f1f;
+    padding: 15px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+  header h1 {
+    margin: 0; font-weight: 700; font-size: 1.5rem;
+    color: #4caf50;
+    letter-spacing: 1px;
+  }
+  #download-btn {
+    background: #4caf50; border: none; padding: 10px 18px;
+    border-radius: 25px; color: #121212; font-weight: bold;
+    cursor: pointer; transition: background-color 0.3s ease;
+  }
+  #download-btn:hover {
+    background: #66bb6a;
+  }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+  }
+  #user-info {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    color: #9ccc65;
+  }
+  #online-info {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    color: #7cb342;
+  }
+  #chat-to-container {
+    margin-bottom: 15px;
+  }
+  #chat-to {
+    width: 100%;
+    padding: 10px 15px;
+    border-radius: 30px;
+    border: none;
+    background: #242424;
+    color: #eee;
+    font-size: 1rem;
+    box-sizing: border-box;
+    outline-offset: 0;
+    transition: background-color 0.2s ease;
+  }
+  #chat-to::placeholder {
+    color: #999;
+  }
+  #chat-messages {
+    flex: 1;
+    background: #242424;
+    border-radius: 20px;
+    padding: 15px;
+    overflow-y: auto;
+    box-shadow: inset 0 0 5px rgba(76,175,80,0.3);
+  }
+  .message {
+    max-width: 75%;
+    margin-bottom: 15px;
+    padding: 12px 20px;
+    border-radius: 25px;
+    word-wrap: break-word;
+    box-shadow: 0 2px 6px rgba(76,175,80,0.3);
+    position: relative;
+  }
+  .sent {
+    background: #4caf50;
+    color: black;
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+  }
+  .received {
+    background: #3a3a3a;
+    color: #eee;
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+  }
+  .message .sender-name {
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+    opacity: 0.8;
+  }
+  .message .timestamp {
+    position: absolute;
+    bottom: 3px;
+    right: 12px;
+    font-size: 0.7rem;
+    color: #c8e6c9;
+    opacity: 0.7;
+  }
+  #presence-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    background-color: #f44336; /* red by default */
+    vertical-align: middle;
+    margin-left: 10px;
+    box-shadow: 0 0 5px rgba(244,67,54,0.7);
+  }
+  #chat-form {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+  }
+  #chat-input {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 30px;
+    border: none;
+    font-size: 1rem;
+    outline-offset: 0;
+    background-color: #333;
+    color: #eee;
+  }
+  #send-btn {
+    background: #4caf50;
+    border: none;
+    color: black;
+    font-weight: bold;
+    border-radius: 30px;
+    padding: 0 25px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  #send-btn:hover {
+    background: #66bb6a;
+  }
+  footer {
+    padding: 15px 20px;
+    background: #1f1f1f;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>FB Chat</h1>
+  <button id="download-btn" title="Download App">Download App</button>
+</header>
+<main>
+  <div id="user-info">Logged in as <span id="username"></span> (<span id="user-email"></span>)</div>
+  <div id="online-info">Chat with: <input type="text" id="chat-to" placeholder="Enter friend's email" autocomplete="off" /></div>
+  <div id="presence-dot" title="User offline"></div>
+  <div id="chat-messages"></div>
+  <form id="chat-form">
+    <input type="text" id="chat-input" placeholder="Write a message..." autocomplete="off" required maxlength="400" />
+    <button id="send-btn" type="submit">Send</button>
+  </form>
+</main>
+<footer>Made with ❤️ by FB Chat - 2025</footer>
+
+<script>
+(async () => {
+  const userEmailSpan = document.getElementById('user-email');
+  const usernameSpan = document.getElementById('username');
+  const chatToInput = document.getElementById('chat-to');
+  const presenceDot = document.getElementById('presence-dot');
+  const chatMessagesDiv = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const downloadBtn = document.getElementById('download-btn');
+
+  // Fetch logged-in session user info
+  const res = await fetch('/api/session-user');
+  if (!res.ok) {
+    window.location.href = '/';
+    return;
+  }
+  const user = await res.json();
+  userEmailSpan.textContent = user.email;
+  usernameSpan.textContent = user.username;
+
+  // Handle Download button
+  downloadBtn.onclick = () => {
+    window.location.href = '/download';
+  };
+
+  let onlineUsers = [];
+  let ws;
+  let currentFriend = '';
+
+  function formatTimestamp(ts) {
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function addMessage(msg) {
+    const { from, text, timestamp } = msg;
+    const isMe = from === user.email;
+    const div = document.createElement('div');
+    div.classList.add('message', isMe ? 'sent' : 'received');
+
+    const senderName = document.createElement('div');
+    senderName.className = 'sender-name';
+    senderName.textContent = isMe ? 'Me' : from;
+    div.appendChild(senderName);
+
+    const messageText = document.createElement('div');
+    messageText.textContent = text;
+    div.appendChild(messageText);
+
+    const timeSpan = document.createElement('div');
+    timeSpan.className = 'timestamp';
+    timeSpan.textContent = formatTimestamp(timestamp);
+    div.appendChild(timeSpan);
+
+    chatMessagesDiv.appendChild(div);
+    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+  }
+
+  function clearMessages() {
+    chatMessagesDiv.innerHTML = '';
+  }
+
+  function updatePresenceDot(friendEmail) {
+    if (onlineUsers.includes(friendEmail)) {
+      presenceDot.style.backgroundColor = '#4caf50';
+      presenceDot.title = friendEmail + ' is online';
+    } else {
+      presenceDot.style.backgroundColor = '#f44336';
+      presenceDot.title = friendEmail + ' is offline';
+    }
+  }
+
+  chatToInput.addEventListener('change', () => {
+    currentFriend = chatToInput.value.trim().toLowerCase();
+    clearMessages();
+    updatePresenceDot(currentFriend);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'login', email: user.email }));
+    }
+  });
+
+  chatForm.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!currentFriend) {
+      alert('Enter an email to chat with!');
+      return;
+    }
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    const msgObj = { from: user.email, to: currentFriend, text, timestamp: Date.now() };
+    addMessage(msgObj);
+
+    ws.send(JSON.stringify({ type: 'private-message', to: currentFriend, text }));
+    chatInput.value = '';
+  });
+
+  // WebSocket connection
+  function initWS() {
+    ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'login', email: user.email }));
+      if (currentFriend) {
+        clearMessages();
+        updatePresenceDot(currentFriend);
+      }
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'message-history' && Array.isArray(data.messages)) {
+        clearMessages();
+        data.messages.forEach(m => {
+          if (m.from === currentFriend || m.to === currentFriend) {
+            addMessage(m);
+          }
+        });
+      } else if (data.type === 'private-message') {
+        const { from, to } = data;
+        if (from === currentFriend || to === currentFriend) {
+          addMessage(data);
+        }
+      } else if (data.type === 'online-users') {
+        onlineUsers = data.onlineUsers;
+        updatePresenceDot(currentFriend);
+      }
+    };
+
+    ws.onclose = () => {
+      setTimeout(initWS, 3000); // Reconnect
+    };
+  }
+
+  initWS();
+
+})();
+</script>
+</body>
+</html>
