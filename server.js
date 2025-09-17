@@ -42,7 +42,7 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
 
-app.get((req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.post('/api/signup', async (req, res) => {
   const { email, username, phone, password, confirm } = req.body;
@@ -108,8 +108,9 @@ function requireLogin(req, res, next) {
   if (!req.session.userEmail) return res.redirect('/');
   next();
 }
-app.get('chat.html', requireLogin, (req, res) => {
-  res.sendFile(path.join(__dirname,'chat.html'));
+
+app.get('/chat.html', requireLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'chat.html'));
 });
 
 app.get('/api/session-user', (req, res) => {
@@ -119,9 +120,7 @@ app.get('/api/session-user', (req, res) => {
   res.json({ email: user.email, username: user.username });
 });
 
-// Serve download page/api
-app.get('app.apk', (req, res) => {
-  // Provide a page or direct app download link, e.g., APK file hosted in /public/downloads
+app.get('/app.apk', (req, res) => {
   res.sendFile(path.join(__dirname, 'app.apk'));
 });
 
@@ -216,5 +215,4 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-git add server.js
-git commit -m "Update server.js logic and static file serving"
+
