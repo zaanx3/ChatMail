@@ -1,5 +1,4 @@
 require('dotenv').config();
-
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -120,9 +119,19 @@ app.get('/api/session-user', (req, res) => {
   res.json({ email: user.email, username: user.username });
 });
 
-app.get('/app.apk', (req, res) => {
-  res.sendFile(path.join(__dirname, 'app.apk'));
+
+
+// Route to serve your APK file from root folder
+app.get('/download', (req, res) => {
+  const apkPath = path.join(__dirname, 'app.apk'); // __dirname is the root folder of your server.js
+  res.download(apkPath, 'app.apk', (err) => {
+    if (err) {
+      console.error('Error sending apk:', err);
+      res.status(500).send('Could not download the file.');
+    }
+  });
 });
+
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
